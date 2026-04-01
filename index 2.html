@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GuestList Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080809;
+    --surface: #101012;
+    --surface2: #18181c;
+    --surface3: #202026;
+    --accent: #f5e642;
+    --accent2: #f7ed6e;
+    --text: #f4f4f6;
+    --text2: #8888a0;
+    --text3: #44445a;
+    --green: #f5e642;
+    --red: #ff5566;
+    --blue: #60a5fa;
+    --purple: #a78bfa;
+    --border: rgba(245,230,66,0.12);
+    --radius: 12px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Space Grotesk',sans-serif; min-height:100vh; overflow-x:hidden; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width:4px; height:4px; }
+  ::-webkit-scrollbar-track { background:var(--surface); }
+  ::-webkit-scrollbar-thumb { background:var(--accent); border-radius:4px; }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    position: sticky; top:0; z-index:100;
+    backdrop-filter: blur(20px);
+  }
+  .header-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .logo { font-family:'Space Grotesk',sans-serif; font-size:18px; font-weight:700; color:var(--accent); letter-spacing:2px; text-transform:uppercase; }
+  .header-right { display:flex; align-items:center; gap:8px; }
+  .sync-badge { font-size:11px; font-family:'Space Mono',monospace; white-space:nowrap; }
+  .nav-tabs { display:flex; gap:3px; background:var(--surface2); border-radius:10px; padding:3px; overflow-x:auto; scrollbar-width:none; }
+  .nav-tabs::-webkit-scrollbar { display:none; }
+  .nav-tab { padding:7px 12px; border-radius:7px; cursor:pointer; font-size:12px; font-weight:500; color:var(--text2); transition:all .2s; border:none; background:transparent; font-family:'Space Grotesk',sans-serif; white-space:nowrap; letter-spacing:.2px; flex-shrink:0; }
+  .nav-tab.active { background:var(--accent); color:#080809; font-weight:700; }
+  .nav-tab:hover:not(.active) { color:var(--text); background:var(--surface3); }
+  .event-badge { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:5px 10px; font-size:11px; font-family:'Space Mono',monospace; color:var(--accent); cursor:pointer; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  /* PAGES */
+  .page { display:none; padding:16px; max-width:1400px; margin:0 auto; }
+  .page.active { display:block; }
+
+  /* CARDS */
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; }
+  .card-title { font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:600; color:var(--accent); margin-bottom:14px; display:flex; align-items:center; gap:8px; letter-spacing:.5px; text-transform:uppercase; }
+
+  /* GRID */
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+  .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  @media(max-width:900px) { .grid-4 { grid-template-columns:repeat(2,1fr); } .grid-3 { grid-template-columns:1fr 1fr; } }
+  @media(max-width:600px) { .grid-2,.grid-3,.grid-4 { grid-template-columns:1fr 1fr; } }
+  @media(max-width:400px) { .grid-2,.grid-3,.grid-4 { grid-template-columns:1fr; } }
+
+  /* STAT CARDS */
+  .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
+  .stat-label { font-size:9px; font-family:'Space Mono',monospace; color:var(--text3); letter-spacing:2px; text-transform:uppercase; margin-bottom:6px; }
+  .stat-value { font-family:'Space Grotesk',sans-serif; font-size:32px; font-weight:700; color:var(--text); line-height:1; }
+  .stat-sub { font-size:11px; color:var(--text2); margin-top:5px; }
+
+  /* GAUGE */
+  .gauge-wrap { margin-top:8px; }
+  .gauge-bar { height:5px; background:var(--surface3); border-radius:3px; overflow:hidden; }
+  .gauge-fill { height:100%; border-radius:3px; transition:width .6s ease; }
+  .gauge-green { background:linear-gradient(90deg,#f5e642,#e6d420); }
+  .gauge-yellow { background:linear-gradient(90deg,#fbbf24,#f59e0b); }
+  .gauge-red { background:linear-gradient(90deg,#f87171,#ef4444); }
+  .gauge-label { display:flex; justify-content:space-between; font-size:10px; color:var(--text3); margin-top:4px; font-family:'Space Mono',monospace; }
+
+  /* BUTTONS */
+  .btn { display:inline-flex; align-items:center; gap:6px; padding:9px 18px; border-radius:8px; border:none; cursor:pointer; font-size:13px; font-weight:600; font-family:'Space Grotesk',sans-serif; transition:all .2s; letter-spacing:.3px; }
+  .btn-primary { background:var(--accent); color:#080809; }
+  .btn-primary:hover { background:var(--accent2); transform:translateY(-1px); box-shadow:0 0 20px rgba(245,230,66,.25); }
+  .btn-ghost { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+  .btn-ghost:hover { background:var(--surface3); }
+  .btn-danger { background:rgba(255,85,102,.12); color:var(--red); border:1px solid rgba(255,85,102,.3); }
+  .btn-danger:hover { background:rgba(255,85,102,.22); }
+  .btn-sm { padding:6px 12px; font-size:12px; }
+  .btn-icon { padding:8px; border-radius:8px; background:var(--surface2); border:1px solid var(--border); color:var(--text2); cursor:pointer; transition:all .2s; font-size:14px; }
+  .btn-icon:hover { color:var(--text); background:var(--surface3); }
+
+  /* INPUTS */
+  .form-group { margin-bottom:14px; }
+  .form-label { display:block; font-size:10px; font-family:'Space Mono',monospace; color:var(--text3); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:6px; }
+  .form-input, .form-select, .form-textarea {
+    width:100%; background:var(--surface2); border:1px solid rgba(255,255,255,.07); border-radius:8px;
+    padding:10px 12px; color:var(--text); font-size:14px; font-family:'Space Grotesk',sans-serif;
+    transition:border .2s; outline:none;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(245,230,66,.06); }
+  .form-select option { background:var(--surface2); }
+  .form-textarea { resize:vertical; min-height:70px; }
+
+  /* SEARCH */
+  .search-wrap { position:relative; }
+  .search-wrap .form-input { padding-left:36px; }
+  .search-icon { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--text3); font-size:15px; pointer-events:none; }
+
+  /* TABLE */
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; }
+  th { font-size:10px; font-family:'Space Mono',monospace; color:var(--text3); letter-spacing:1.5px; text-transform:uppercase; padding:10px 12px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+  td { padding:11px 12px; border-bottom:1px solid rgba(255,255,255,.04); font-size:13px; vertical-align:middle; }
+  tr:hover td { background:rgba(200,169,110,.04); }
+  tr.checked-in td { background:rgba(245,230,66,.03); }
+
+  /* TAGS */
+  .tag { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; font-family:'Space Mono',monospace; white-space:nowrap; }
+  .tag-dot { width:6px; height:6px; border-radius:50%; }
+
+  /* BADGES */
+  .badge-checkin { display:inline-flex; align-items:center; gap:4px; }
+  .checkin-btn { width:26px; height:26px; border-radius:6px; border:1px solid var(--border); background:var(--surface2); color:var(--text3); cursor:pointer; font-size:13px; transition:all .2s; display:flex; align-items:center; justify-content:center; }
+  .checkin-btn.checked { background:rgba(245,230,66,.2); border-color:#080809; color:#080809; }
+  .checkin-count { font-size:12px; color:var(--text2); font-family:'Space Mono',monospace; min-width:20px; text-align:center; }
+
+  /* MODAL */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:200; display:none; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(4px); }
+  .modal-overlay.open { display:flex; }
+  .modal { background:var(--surface); border:1px solid var(--border); border-radius:16px; width:100%; max-width:520px; max-height:90vh; overflow-y:auto; padding:28px; animation:modalIn .2s ease; }
+  @keyframes modalIn { from{opacity:0;transform:translateY(20px) scale(.97)} to{opacity:1;transform:none} }
+  .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+  .modal-title { font-family:'Space Grotesk',sans-serif; font-size:18px; font-weight:700; color:var(--accent); letter-spacing:-.2px; }
+  .modal-close { background:var(--surface2); border:1px solid var(--border); border-radius:8px; width:32px; height:32px; color:var(--text2); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; }
+  .modal-close:hover { color:var(--text); }
+
+  /* TOAST */
+  .toast-container { position:fixed; bottom:20px; right:20px; z-index:300; display:flex; flex-direction:column; gap:8px; }
+  .toast { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 16px; font-size:13px; min-width:200px; animation:toastIn .3s ease; display:flex; align-items:center; gap:8px; }
+  .toast.success { border-color:rgba(245,230,66,.4); }
+  .toast.error { border-color:rgba(248,113,113,.4); }
+  @keyframes toastIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:none} }
+
+  /* SECTION TITLE */
+  .section-title { font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; color:var(--text); margin-bottom:6px; letter-spacing:-.3px; }
+  .section-sub { font-size:13px; color:var(--text2); margin-bottom:24px; }
+
+  /* CATEGORY PILL */
+  .cat-item { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--surface2); border-radius:10px; margin-bottom:8px; border:1px solid var(--border); }
+  .cat-color { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+
+  /* ENTRY CHECKIN BIG */
+  .checkin-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px; margin-bottom:12px; transition:all .2s; }
+  .checkin-card:hover { border-color:var(--accent); }
+  .checkin-name { font-family:'Space Grotesk',sans-serif; font-size:18px; font-weight:700; letter-spacing:-.2px; }
+  .checkin-meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .checkin-actions { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+  .entry-btn { flex:1; min-width:80px; padding:10px; border-radius:10px; border:none; cursor:pointer; font-size:13px; font-weight:600; font-family:'Space Grotesk',sans-serif; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:6px; letter-spacing:.2px; }
+  .entry-btn-in { background:rgba(245,230,66,.15); color:#080809; border:1px solid rgba(245,230,66,.3); }
+  .entry-btn-in:hover { background:rgba(245,230,66,.3); }
+  .entry-btn-in.done { background:rgba(245,230,66,.3); }
+  .entry-btn-out { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+  .progress-dots { display:flex; gap:4px; margin-top:8px; }
+  .dot { width:10px; height:10px; border-radius:50%; border:2px solid var(--border); }
+  .dot.filled { background:var(--green); border-color:#080809; }
+  .dot.partial { background:var(--accent); border-color:var(--accent); }
+
+  /* EXPORT */
+  .export-btn { display:flex; align-items:center; gap:12px; padding:16px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; cursor:pointer; transition:all .2s; text-decoration:none; color:var(--text); width:100%; margin-bottom:10px; }
+  .export-btn:hover { border-color:var(--accent); background:var(--surface3); }
+  .export-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+
+  /* FLEX UTILS */
+  .flex { display:flex; }
+  .items-center { align-items:center; }
+  .justify-between { justify-content:space-between; }
+  .gap-2 { gap:8px; }
+  .gap-3 { gap:12px; }
+  .mb-3 { margin-bottom:12px; }
+  .mb-4 { margin-bottom:16px; }
+  .mb-6 { margin-bottom:24px; }
+  .mt-4 { margin-top:16px; }
+  .text-sm { font-size:13px; }
+  .text-xs { font-size:11px; }
+  .text-accent { color:var(--accent); }
+  .text-muted { color:var(--text2); }
+  .text-green { color:#080809; }
+  .text-red { color:var(--red); }
+  .font-mono { font-family:'Space Mono',monospace; }
+
+  /* EVENTS PAGE */
+  .event-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; cursor:pointer; transition:all .2s; }
+  .event-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+  .event-card.selected { border-color:var(--accent); background:rgba(200,169,110,.05); }
+  .event-date { font-family:'Space Mono',monospace; font-size:11px; color:var(--text3); letter-spacing:1px; }
+  .event-name { font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; margin-top:4px; letter-spacing:-.2px; }
+  .event-stats { display:flex; gap:12px; margin-top:12px; }
+  .event-stat { font-size:11px; color:var(--text2); }
+  .event-stat strong { color:var(--text); font-family:'Space Mono',monospace; }
+
+  .th-sort { cursor:pointer; user-select:none; }
+  .th-sort:hover { color:var(--accent); }
+  .sort-icon { opacity:.35; font-size:10px; }
+  .th-sort.asc .sort-icon::after { content:'↑'; }
+  .th-sort.desc .sort-icon::after { content:'↓'; }
+  .th-sort.asc .sort-icon, .th-sort.desc .sort-icon { opacity:1; color:var(--accent); }
+  .th-sort.asc span, .th-sort.desc span { display:none; }
+  .separator { height:1px; background:var(--border); margin:20px 0; }
+
+  /* COLOR PICKER ROW */
+  .color-options { display:flex; gap:8px; flex-wrap:wrap; }
+  .color-opt { width:24px; height:24px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:all .2s; }
+  .color-opt.selected { border-color:white; transform:scale(1.2); }
+
+  /* QUOTA WARNING */
+  .quota-warn { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-family:'Space Mono',monospace; padding:2px 8px; border-radius:20px; }
+  .quota-ok { background:rgba(245,230,66,.1); color:#080809; }
+  .quota-warn-y { background:rgba(251,191,36,.1); color:#fbbf24; }
+  .quota-over { background:rgba(248,113,113,.1); color:var(--red); }
+
+  .inline-form { display:flex; gap:8px; align-items:flex-end; }
+  .inline-form .form-group { margin:0; flex:1; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">GUESTLIST</div>
+    <div class="header-right">
+      <span id="syncStatus" class="sync-badge">🔄</span>
+      <div class="event-badge" onclick="showPage('events')">📅 <span id="currentEventName">Sélectionner</span> ▾</div>
+      <button class="btn btn-primary btn-sm" onclick="openAddGuest()">+ Invité</button>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('dashboard')">📊 Tableau</button>
+    <button class="nav-tab" onclick="showPage('guests')">👥 Invités</button>
+    <button class="nav-tab" onclick="showPage('checkin')">🚪 Entrée</button>
+    <button class="nav-tab" onclick="showPage('settings')">⚙️ Param.</button>
+    <button class="nav-tab" onclick="showPage('export')">📤 Export</button>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- =================== EVENTS PAGE =================== -->
+<div class="page active" id="page-events">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <div class="section-title">Mes Événements</div>
+      <div class="section-sub">Sélectionnez ou créez un événement</div>
+    </div>
+    <button class="btn btn-primary" onclick="openModal('addEventModal')">+ Nouvel événement</button>
+  </div>
+  <div class="grid-3" id="eventsList"></div>
+</div>
+
+<!-- =================== DASHBOARD =================== -->
+<div class="page" id="page-dashboard">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <div class="section-title" id="dashEventName">—</div>
+      <div class="section-sub">Vue d'ensemble de l'événement</div>
+    </div>
+  </div>
+
+  <!-- GLOBAL STATS -->
+  <div class="grid-4 mb-4" id="globalStats"></div>
+
+  <!-- CAT + BRACELET STATS -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">👥 Par catégorie</div>
+      <div id="catStats"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🎗️ Bracelets nécessaires</div>
+      <div id="braceletStats"></div>
+    </div>
+  </div>
+</div>
+
+<!-- =================== GUESTS =================== -->
+<div class="page" id="page-guests">
+  <div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:12px;">
+    <div>
+      <div class="section-title">Liste des invités</div>
+      <div class="section-sub" id="guestCount">0 invités</div>
+    </div>
+    <div class="flex gap-2" style="flex-wrap:wrap;">
+      <div class="search-wrap" style="width:220px;">
+        <span class="search-icon">🔍</span>
+        <input class="form-input" id="guestSearch" placeholder="Rechercher un nom..." oninput="renderGuestTable()">
+      </div>
+      <select class="form-select" style="width:160px;" id="filterCat" onchange="renderGuestTable()"><option value="">Toutes catégories</option></select>
+      <button class="btn btn-primary" onclick="openAddGuest()">+ Invité</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="th-sort" onclick="sortTable('name')" id="th-name">Nom <span class="sort-icon">↕</span></th>
+            <th class="th-sort" onclick="sortTable('cat')" id="th-cat">Catégorie <span class="sort-icon">↕</span></th>
+            <th class="th-sort" onclick="sortTable('bracelet')" id="th-bracelet">Bracelet <span class="sort-icon">↕</span></th>
+            <th class="th-sort" onclick="sortTable('places')" id="th-places">Places <span class="sort-icon">↕</span></th>
+            <th class="th-sort" onclick="sortTable('bracelets')" id="th-bracelets">Bracelets <span class="sort-icon">↕</span></th>
+            <th>Commentaire</th>
+            <th class="th-sort" onclick="sortTable('checkin')" id="th-checkin">Check-in <span class="sort-icon">↕</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="guestTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- =================== CHECKIN =================== -->
+<div class="page" id="page-checkin">
+  <div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:12px;">
+    <div>
+      <div class="section-title">Contrôle d'entrée</div>
+      <div class="section-sub">Recherchez un invité pour gérer son entrée</div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <span id="checkinProgress" class="text-sm text-muted font-mono"></span>
+    </div>
+  </div>
+  <div class="search-wrap mb-4" style="max-width:500px;">
+    <span class="search-icon" style="font-size:18px;">🔍</span>
+    <input class="form-input" id="checkinSearch" placeholder="Tapez un nom d'invité..." oninput="renderCheckin()" style="font-size:16px;padding:14px 14px 14px 44px;">
+  </div>
+  <div id="checkinResults"></div>
+</div>
+
+<!-- =================== SETTINGS =================== -->
+<div class="page" id="page-settings">
+  <div class="section-title mb-4">Paramètres</div>
+  <div class="grid-2">
+    <!-- CATEGORIES -->
+    <div class="card">
+      <div class="card-title">👥 Catégories d'invités</div>
+      <div id="catList"></div>
+      <div class="separator"></div>
+      <div class="inline-form">
+        <div class="form-group">
+          <label class="form-label">Nouvelle catégorie</label>
+          <input class="form-input" id="newCatName" placeholder="Nom de la catégorie">
+        </div>
+        <div class="form-group" style="width:90px;">
+          <label class="form-label">Quota</label>
+          <input class="form-input" id="newCatQuota" type="number" placeholder="—" min="0">
+        </div>
+        <div style="padding-bottom:1px;">
+          <button class="btn btn-primary" onclick="addCategory()">+</button>
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label class="form-label">Couleur</label>
+        <div class="color-options" id="newCatColorPicker"></div>
+      </div>
+    </div>
+
+    <!-- BRACELETS -->
+    <div class="card">
+      <div class="card-title">🎗️ Types de bracelets</div>
+      <div id="braceletList"></div>
+      <div class="separator"></div>
+      <div class="inline-form">
+        <div class="form-group">
+          <label class="form-label">Nouveau bracelet</label>
+          <input class="form-input" id="newBraceletName" placeholder="Nom du bracelet">
+        </div>
+        <div style="padding-bottom:1px;">
+          <button class="btn btn-primary" onclick="addBracelet()">+</button>
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label class="form-label">Couleur</label>
+        <div class="color-options" id="newBraceletColorPicker"></div>
+      </div>
+    </div>
+
+    <!-- EVENTS -->
+    <div class="card" style="grid-column:span 2;">
+      <div class="card-title">📅 Événements</div>
+      <div id="eventSettingsList"></div>
+      <div style="margin-top:12px;">
+        <button class="btn btn-ghost btn-sm" onclick="openModal('addEventModal')">+ Nouvel événement</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =================== EXPORT =================== -->
+<div class="page" id="page-export">
+  <div class="section-title mb-4">Export & Synthèse</div>
+
+  <div class="grid-2">
+    <div>
+      <div class="card mb-4">
+        <div class="card-title">📋 Résumé de l'événement</div>
+        <div id="exportSummary"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🎗️ Bracelets à commander</div>
+        <div id="exportBracelets"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card mb-4">
+        <div class="card-title">✅ Présents / ❌ Absents</div>
+        <div id="exportPresence"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📤 Télécharger</div>
+        <button class="export-btn" onclick="exportCSV()">
+          <div class="export-icon" style="background:rgba(245,230,66,.1);">📊</div>
+          <div><strong>Exporter en CSV</strong><div class="text-xs text-muted" style="margin-top:2px;">Tableur complet avec toutes les données</div></div>
+        </button>
+        <button class="export-btn" onclick="exportJSON()">
+          <div class="export-icon" style="background:rgba(96,165,250,.1);">🗃️</div>
+          <div><strong>Exporter en JSON</strong><div class="text-xs text-muted" style="margin-top:2px;">Sauvegarde complète des données</div></div>
+        </button>
+        <button class="export-btn" onclick="exportPresenceReport()">
+          <div class="export-icon" style="background:rgba(167,139,250,.1);">📝</div>
+          <div><strong>Rapport de présence</strong><div class="text-xs text-muted" style="margin-top:2px;">CSV présents / absents</div></div>
+        </button>
+        <button class="export-btn" onclick="printGuestList()">
+          <div class="export-icon" style="background:rgba(200,169,110,.1);">🖨️</div>
+          <div><strong>Imprimer la liste</strong><div class="text-xs text-muted" style="margin-top:2px;">Format imprimable</div></div>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =================== MODALS =================== -->
+
+<!-- ADD EVENT -->
+<div class="modal-overlay" id="addEventModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Nouvel événement</div>
+      <button class="modal-close" onclick="closeModal('addEventModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nom de l'événement *</label>
+      <input class="form-input" id="eventNameInput" placeholder="ex: Soirée Gala 2024">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Date</label>
+      <input class="form-input" id="eventDateInput" type="date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Lieu</label>
+      <input class="form-input" id="eventVenueInput" placeholder="ex: Palais des Congrès">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Capacité totale</label>
+      <input class="form-input" id="eventCapacityInput" type="number" placeholder="ex: 500">
+    </div>
+    <div class="flex gap-2 mt-4">
+      <button class="btn btn-ghost" onclick="closeModal('addEventModal')" style="flex:1;">Annuler</button>
+      <button class="btn btn-primary" onclick="saveEvent()" style="flex:2;">Créer l'événement</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD GUEST -->
+<div class="modal-overlay" id="addGuestModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="guestModalTitle">Ajouter un invité</div>
+      <button class="modal-close" onclick="closeModal('addGuestModal')">✕</button>
+    </div>
+    <input type="hidden" id="editGuestId">
+
+    <!-- MODE TOGGLE (only shown when adding, not editing) -->
+    <div id="modeToggle" style="display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:3px;margin-bottom:16px;">
+      <button id="modeSingle" onclick="setGuestMode('single')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:'Space Grotesk',sans-serif;background:var(--accent);color:#080809;">👤 Un invité</button>
+      <button id="modeBulk" onclick="setGuestMode('bulk')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:'Space Grotesk',sans-serif;background:transparent;color:var(--text2);">📋 Liste en masse</button>
+    </div>
+
+    <!-- SINGLE MODE -->
+    <div id="singleMode">
+      <div class="form-group">
+        <label class="form-label">Nom *</label>
+        <input class="form-input" id="guestNameInput" placeholder="ex: DUPONT">
+      </div>
+      <div class="grid-2" style="gap:12px;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Catégorie</label>
+          <select class="form-select" id="guestCatInput"><option value="">— Aucune —</option></select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Nbre de places</label>
+          <input class="form-input" id="guestPlacesInput" type="number" value="1" min="1">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:14px;">
+        <label class="form-label">Bracelets</label>
+        <div id="braceletPicker" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;"></div>
+      </div>
+      <div class="form-group" style="margin-top:14px;">
+        <label class="form-label">Commentaire</label>
+        <textarea class="form-textarea" id="guestCommentInput" placeholder="Notes libres..."></textarea>
+      </div>
+      <div class="flex gap-2 mt-4">
+        <button class="btn btn-ghost" onclick="closeModal('addGuestModal')" style="flex:1;">Annuler</button>
+        <button class="btn btn-primary" onclick="saveGuest()" style="flex:2;">Enregistrer</button>
+      </div>
+    </div>
+
+    <!-- BULK MODE -->
+    <div id="bulkMode" style="display:none;">
+      <div class="form-group">
+        <label class="form-label">Liste de noms *</label>
+        <textarea class="form-textarea" id="bulkNamesInput" placeholder="Un nom par ligne :&#10;DUPONT&#10;MARTIN&#10;GARCIA +1&#10;COHEN" style="min-height:130px;font-family:'Space Mono',monospace;font-size:13px;"></textarea>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;">Un nom par ligne — ajoutez "+1", "+2"... pour des places supplémentaires</div>
+      </div>
+      <div class="grid-2" style="gap:12px;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Catégorie (tous)</label>
+          <select class="form-select" id="bulkCatInput"><option value="">— Aucune —</option></select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Places par défaut</label>
+          <input class="form-input" id="bulkPlacesInput" type="number" value="1" min="1">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:14px;">
+        <label class="form-label">Bracelets (tous)</label>
+        <div id="bulkBraceletPicker" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;"></div>
+      </div>
+      <div id="bulkPreview" style="margin-top:14px;"></div>
+      <div class="flex gap-2 mt-4">
+        <button class="btn btn-ghost" onclick="closeModal('addGuestModal')" style="flex:1;">Annuler</button>
+        <button class="btn btn-primary" onclick="saveBulkGuests()" style="flex:2;" id="bulkSaveBtn">Ajouter la liste</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+// ============================================================
+//  FIREBASE
+// ============================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAwAL9P8byc6AteZU4hKgbvDVJ8xx-wVHo",
+  authDomain: "guestlist-app-2d99e.firebaseapp.com",
+  projectId: "guestlist-app-2d99e",
+  storageBucket: "guestlist-app-2d99e.firebasestorage.app",
+  messagingSenderId: "469032871066",
+  appId: "1:469032871066:web:2e73f63f35e15849602b23"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+const STATE_DOC = doc(db, 'app', 'state');
+
+let isSaving = false;
+
+async function saveState() {
+  if(isSaving) return;
+  isSaving = true;
+  try {
+    await setDoc(STATE_DOC, {
+      events: state.events,
+      categories: state.categories,
+      bracelets: state.bracelets,
+      guests: state.guests,
+    });
+  } catch(e) { console.error('Erreur sauvegarde:', e); }
+  isSaving = false;
+}
+
+function startSync() {
+  showSyncStatus('connecting');
+  onSnapshot(STATE_DOC, (snap) => {
+    if(snap.exists()) {
+      const data = snap.data();
+      state.events = data.events || [];
+      state.categories = data.categories || [];
+      state.bracelets = data.bracelets || [];
+      state.guests = data.guests || [];
+      // Restore currentEventId if valid
+      if(state.currentEventId && !state.events.find(e=>e.id===state.currentEventId)) {
+        state.currentEventId = state.events[0]?.id || null;
+      }
+      if(!state.currentEventId && state.events.length>0) {
+        state.currentEventId = state.events[0].id;
+      }
+      const ev = state.events.find(e=>e.id===state.currentEventId);
+      if(ev) document.getElementById('currentEventName').textContent = ev.name;
+      refresh();
+    }
+    showSyncStatus('synced');
+  }, (err) => {
+    console.error('Sync error:', err);
+    showSyncStatus('error');
+  });
+}
+
+function showSyncStatus(status) {
+  const el = document.getElementById('syncStatus');
+  if(!el) return;
+  if(status==='connecting') { el.textContent='🔄'; el.title='Connexion...'; }
+  else if(status==='synced') { el.textContent='🟢'; el.title='Synchronisé'; }
+  else if(status==='error') { el.textContent='🔴'; el.title='Hors ligne'; }
+}
+
+// ============================================================
+//  STATE
+// ============================================================
+const COLORS = ['#c8a96e','#f87171','#f5e642','#60a5fa','#a78bfa','#f472b6','#fb923c','#34d399','#818cf8','#fbbf24','#e879f9','#2dd4bf'];
+
+let state = {
+  events: [],
+  categories: [],
+  bracelets: [],
+  guests: [],
+  currentEventId: null,
+  selectedCatColor: COLORS[0],
+  selectedBraceletColor: COLORS[2],
+  sortCol: 'name',
+  sortDir: 'asc',
+};
+
+// ============================================================
+//  UTILS
+// ============================================================
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function toast(msg, type='success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = (type==='success'?'✅':'❌') + ' ' + msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(()=>el.remove(), 3000);
+}
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name)?.classList.add('active');
+  const tabs = document.querySelectorAll('.nav-tab');
+  const map = {dashboard:0,guests:1,checkin:2,settings:3,export:4};
+  if(map[name]!==undefined) tabs[map[name]]?.classList.add('active');
+  refresh();
+}
+
+// Expose to global scope (needed for onclick handlers with type="module")
+window.showPage = showPage;
+window.openModal = openModal;
+window.closeModal = closeModal;
+
+// ============================================================
+//  EVENTS
+// ============================================================
+function saveEvent() {
+  const name = document.getElementById('eventNameInput').value.trim();
+  if(!name) { toast('Nom requis','error'); return; }
+  const ev = {
+    id: uid(), name,
+    date: document.getElementById('eventDateInput').value,
+    venue: document.getElementById('eventVenueInput').value,
+    capacity: parseInt(document.getElementById('eventCapacityInput').value)||0
+  };
+  state.events.push(ev);
+  if(!state.currentEventId) selectEvent(ev.id);
+  saveState();
+  closeModal('addEventModal');
+  ['eventNameInput','eventDateInput','eventVenueInput','eventCapacityInput'].forEach(id=>document.getElementById(id).value='');
+  toast('Événement créé !');
+  refresh();
+}
+function selectEvent(id) {
+  state.currentEventId = id;
+  const ev = state.events.find(e=>e.id===id);
+  document.getElementById('currentEventName').textContent = ev ? ev.name : 'Sélectionner';
+  saveState();
+  refresh();
+}
+function deleteEvent(id) {
+  if(!confirm('Supprimer cet événement et tous ses invités ?')) return;
+  state.events = state.events.filter(e=>e.id!==id);
+  state.guests = state.guests.filter(g=>g.eventId!==id);
+  if(state.currentEventId===id) state.currentEventId = state.events[0]?.id||null;
+  saveState(); refresh();
+}
+
+// ============================================================
+//  CATEGORIES
+// ============================================================
+function addCategory() {
+  const name = document.getElementById('newCatName').value.trim();
+  if(!name) { toast('Nom requis','error'); return; }
+  const quota = parseInt(document.getElementById('newCatQuota').value)||0;
+  state.categories.push({ id:uid(), name, color:state.selectedCatColor, quota });
+  document.getElementById('newCatName').value='';
+  document.getElementById('newCatQuota').value='';
+  saveState(); refresh(); toast('Catégorie ajoutée !');
+}
+function deleteCategory(id) {
+  state.categories = state.categories.filter(c=>c.id!==id);
+  saveState(); refresh();
+}
+function updateCategoryQuota(id, val) {
+  const cat = state.categories.find(c=>c.id===id);
+  if(!cat) return;
+  cat.quota = parseInt(val)||0;
+  saveState(); renderDashboard();
+}
+
+// ============================================================
+//  BRACELETS
+// ============================================================
+function addBracelet() {
+  const name = document.getElementById('newBraceletName').value.trim();
+  if(!name) { toast('Nom requis','error'); return; }
+  state.bracelets.push({ id:uid(), name, color:state.selectedBraceletColor });
+  document.getElementById('newBraceletName').value='';
+  saveState(); refresh(); toast('Bracelet ajouté !');
+}
+function deleteBracelet(id) {
+  state.bracelets = state.bracelets.filter(b=>b.id!==id);
+  saveState(); refresh();
+}
+
+// ============================================================
+//  GUESTS
+// ============================================================
+function openAddGuest() {
+  document.getElementById('editGuestId').value='';
+  document.getElementById('guestModalTitle').textContent='Ajouter un invité';
+  document.getElementById('guestNameInput').value='';
+  document.getElementById('guestCatInput').value='';
+  document.getElementById('guestPlacesInput').value='1';
+  document.getElementById('guestCommentInput').value='';
+  document.getElementById('modeToggle').style.display='flex';
+  document.getElementById('bulkNamesInput').value='';
+  document.getElementById('bulkPreview').innerHTML='';
+  setGuestMode('single');
+  populateGuestSelects([]);
+  openModal('addGuestModal');
+}
+function openEditGuest(id) {
+  const g = state.guests.find(x=>x.id===id);
+  if(!g) return;
+  document.getElementById('editGuestId').value=id;
+  document.getElementById('guestModalTitle').textContent="Modifier l'invité";
+  document.getElementById('modeToggle').style.display='none';
+  setGuestMode('single');
+  document.getElementById('guestNameInput').value=g.name;
+  document.getElementById('guestCatInput').value=g.catId||'';
+  document.getElementById('guestPlacesInput').value=g.places||1;
+  document.getElementById('guestCommentInput').value=g.comment||'';
+  const existing = g.braceletIds || (g.braceletId ? [{id:g.braceletId, qty:g.bracelets||1}] : []);
+  populateGuestSelects(existing);
+  openModal('addGuestModal');
+}
+function setGuestMode(mode) {
+  document.getElementById('singleMode').style.display = mode==='single'?'block':'none';
+  document.getElementById('bulkMode').style.display = mode==='bulk'?'block':'none';
+  document.getElementById('modeSingle').style.background = mode==='single'?'var(--accent)':'transparent';
+  document.getElementById('modeSingle').style.color = mode==='single'?'#080809':'var(--text2)';
+  document.getElementById('modeBulk').style.background = mode==='bulk'?'var(--accent)':'transparent';
+  document.getElementById('modeBulk').style.color = mode==='bulk'?'#080809':'var(--text2)';
+  if(mode==='bulk') populateBulkSelects();
+}
+
+function populateBulkSelects() {
+  const cSel = document.getElementById('bulkCatInput');
+  if(cSel) {
+    cSel.innerHTML='<option value="">— Aucune —</option>';
+    state.categories.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.textContent=c.name; cSel.appendChild(o); });
+  }
+  const picker = document.getElementById('bulkBraceletPicker');
+  if(!picker) return;
+  if(state.bracelets.length===0) { picker.innerHTML='<div class="text-xs text-muted">Aucun bracelet défini</div>'; return; }
+  picker.innerHTML = state.bracelets.map(br =>
+    `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+      <div style="width:12px;height:12px;border-radius:3px;background:${br.color};flex-shrink:0;"></div>
+      <span style="flex:1;font-size:13px;font-weight:500;">${br.name}</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button type="button" onclick="changeBulkBraceletQty('${br.id}',-1)" style="width:26px;height:26px;border-radius:6px;background:var(--surface3);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">−</button>
+        <span id="bbqty-${br.id}" style="font-family:'Space Mono',monospace;font-size:13px;min-width:20px;text-align:center;color:var(--text2);">0</span>
+        <button type="button" onclick="changeBulkBraceletQty('${br.id}',1)" style="width:26px;height:26px;border-radius:6px;background:var(--surface3);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">+</button>
+      </div>
+    </div>`
+  ).join('');
+  // Live preview on textarea input
+  const ta = document.getElementById('bulkNamesInput');
+  if(ta) { ta.oninput = renderBulkPreview; }
+}
+
+function changeBulkBraceletQty(brId, delta) {
+  const el = document.getElementById('bbqty-'+brId);
+  if(!el) return;
+  const newVal = Math.max(0, (parseInt(el.textContent)||0) + delta);
+  el.textContent = newVal;
+  el.style.color = newVal > 0 ? 'var(--accent)' : 'var(--text2)';
+}
+
+function getBulkBraceletValues() {
+  return state.bracelets.map(br => {
+    const el = document.getElementById('bbqty-'+br.id);
+    return { id: br.id, qty: el ? (parseInt(el.textContent)||0) : 0 };
+  }).filter(b => b.qty > 0);
+}
+
+function parseBulkNames() {
+  const raw = document.getElementById('bulkNamesInput')?.value || '';
+  return raw.split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .map(line => {
+      // Detect "+1", "+2" etc at the end
+      const match = line.match(/^(.+?)\s*\+(\d+)\s*$/);
+      if(match) return { name: match[1].trim().toUpperCase(), extra: parseInt(match[2]) };
+      return { name: line.toUpperCase(), extra: 0 };
+    });
+}
+
+function renderBulkPreview() {
+  const names = parseBulkNames();
+  const preview = document.getElementById('bulkPreview');
+  if(!preview) return;
+  if(names.length === 0) { preview.innerHTML=''; return; }
+  const defaultPlaces = parseInt(document.getElementById('bulkPlacesInput')?.value)||1;
+  preview.innerHTML = `
+    <div style="font-size:11px;font-family:'Space Mono',monospace;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">${names.length} invité(s) à ajouter</div>
+    <div style="max-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;">
+      ${names.map(n => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 10px;background:var(--surface2);border-radius:6px;font-size:12px;">
+          <span style="font-weight:600;">${n.name}</span>
+          <span style="font-family:'Space Mono',monospace;color:var(--text2);">${defaultPlaces + n.extra} place${defaultPlaces+n.extra>1?'s':''}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+function saveBulkGuests() {
+  if(!state.currentEventId) { toast('Sélectionnez un événement','error'); return; }
+  const names = parseBulkNames();
+  if(names.length === 0) { toast('Aucun nom saisi','error'); return; }
+  const catId = document.getElementById('bulkCatInput')?.value || null;
+  const defaultPlaces = parseInt(document.getElementById('bulkPlacesInput')?.value)||1;
+  const braceletIds = getBulkBraceletValues();
+  names.forEach(n => {
+    state.guests.push({
+      id: uid(),
+      name: n.name,
+      catId: catId||null,
+      braceletIds,
+      places: defaultPlaces + n.extra,
+      comment: '',
+      eventId: state.currentEventId,
+      checkedIn: 0,
+    });
+  });
+  saveState();
+  closeModal('addGuestModal');
+  toast(`${names.length} invité(s) ajouté(s) !`);
+  refresh();
+}
+  // Category select
+  const cSel = document.getElementById('guestCatInput');
+  cSel.innerHTML='<option value="">— Aucune —</option>';
+  state.bracelets_types = state.bracelets; // alias
+  state.categories.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.textContent=c.name; cSel.appendChild(o); });
+  // Bracelet picker
+  const picker = document.getElementById('braceletPicker');
+  if(!picker) return;
+  if(state.bracelets.length===0) {
+    picker.innerHTML='<div class="text-xs text-muted">Aucun type de bracelet défini — créez-en dans Paramètres</div>';
+    return;
+  }
+  picker.innerHTML = state.bracelets.map(br => {
+    const existing = existingBracelets ? (existingBracelets.find(b=>b.id===br.id)?.qty||0) : 0;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+      <div style="width:12px;height:12px;border-radius:3px;background:${br.color};flex-shrink:0;"></div>
+      <span style="flex:1;font-size:13px;font-weight:500;">${br.name}</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button type="button" onclick="changeBraceletQty('${br.id}',-1)" style="width:26px;height:26px;border-radius:6px;background:var(--surface3);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">−</button>
+        <span id="bqty-${br.id}" style="font-family:'Space Mono',monospace;font-size:13px;min-width:20px;text-align:center;color:${existing>0?'var(--accent)':'var(--text2)'};">${existing}</span>
+        <button type="button" onclick="changeBraceletQty('${br.id}',1)" style="width:26px;height:26px;border-radius:6px;background:var(--surface3);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">+</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function changeBraceletQty(brId, delta) {
+  const el = document.getElementById('bqty-'+brId);
+  if(!el) return;
+  const newVal = Math.max(0, (parseInt(el.textContent)||0) + delta);
+  el.textContent = newVal;
+  el.style.color = newVal > 0 ? 'var(--accent)' : 'var(--text2)';
+}
+
+function getBraceletPickerValues() {
+  return state.bracelets.map(br => {
+    const el = document.getElementById('bqty-'+br.id);
+    return { id: br.id, qty: el ? (parseInt(el.textContent)||0) : 0 };
+  }).filter(b => b.qty > 0);
+}
+function saveGuest() {
+  const name = document.getElementById('guestNameInput').value.trim().toUpperCase();
+  if(!name) { toast('Nom requis','error'); return; }
+  if(!state.currentEventId) { toast('Sélectionnez un événement','error'); return; }
+  const editId = document.getElementById('editGuestId').value;
+  const data = {
+    name,
+    catId: document.getElementById('guestCatInput').value||null,
+    braceletIds: getBraceletPickerValues(),
+    places: parseInt(document.getElementById('guestPlacesInput').value)||1,
+    comment: document.getElementById('guestCommentInput').value.trim(),
+    eventId: state.currentEventId,
+    checkedIn: editId ? (state.guests.find(g=>g.id===editId)?.checkedIn||0) : 0,
+  };
+  if(editId) {
+    const idx = state.guests.findIndex(g=>g.id===editId);
+    state.guests[idx] = { ...state.guests[idx], ...data };
+    toast('Invité modifié !');
+  } else {
+    state.guests.push({ id:uid(), ...data });
+    toast('Invité ajouté !');
+  }
+  saveState(); closeModal('addGuestModal'); refresh();
+}
+function deleteGuest(id) {
+  if(!confirm('Supprimer cet invité ?')) return;
+  state.guests = state.guests.filter(g=>g.id!==id);
+  saveState(); refresh();
+}
+function checkinGuest(id, count) {
+  const g = state.guests.find(x=>x.id===id);
+  if(!g) return;
+  const newVal = Math.min(Math.max(0, (g.checkedIn||0)+count), g.places);
+  g.checkedIn = newVal;
+  saveState(); renderCheckin(); renderDashboard(); renderExport();
+}
+function currentGuests() {
+  return state.guests.filter(g=>g.eventId===state.currentEventId);
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+function refresh() {
+  renderEvents();
+  renderDashboard();
+  renderGuestTable();
+  renderCheckin();
+  renderSettings();
+  renderExport();
+  updateFilterSelect();
+}
+
+function renderEvents() {
+  const container = document.getElementById('eventsList');
+  if(!container) return;
+  container.innerHTML = '';
+  if(state.events.length===0) {
+    container.innerHTML = '<div class="no-results" style="grid-column:span 3;">Aucun événement. Créez votre premier événement !</div>';
+    return;
+  }
+  state.events.forEach(ev => {
+    const guests = state.guests.filter(g=>g.eventId===ev.id);
+    const totalPlaces = guests.reduce((a,g)=>a+g.places,0);
+    const checkedIn = guests.reduce((a,g)=>a+(g.checkedIn||0),0);
+    const d = document.createElement('div');
+    d.className = 'event-card' + (ev.id===state.currentEventId?' selected':'');
+    d.innerHTML = `
+      <div class="event-date">${ev.date?new Date(ev.date).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}):' — '} ${ev.venue?'· '+ev.venue:''}</div>
+      <div class="event-name">${ev.name}</div>
+      <div class="event-stats">
+        <div class="event-stat"><strong>${guests.length}</strong> invités</div>
+        <div class="event-stat"><strong>${totalPlaces}</strong> places</div>
+        <div class="event-stat"><strong>${checkedIn}</strong> entrées</div>
+        ${ev.capacity?`<div class="event-stat"><strong>${ev.capacity}</strong> capacité</div>`:''}
+      </div>
+    `;
+    d.onclick = () => { selectEvent(ev.id); showPage('dashboard'); };
+    container.appendChild(d);
+  });
+}
+
+// ============================================================
+//  BRACELET HELPERS (support old + new format)
+// ============================================================
+function guestBraceletIds(g) {
+  if(g.braceletIds) return g.braceletIds;
+  if(g.braceletId) return [{id:g.braceletId, qty:g.bracelets||1}];
+  return [];
+}
+function guestTotalBracelets(g) {
+  return guestBraceletIds(g).reduce((a,b)=>a+b.qty,0);
+}
+function guestBraceletQty(g, brId) {
+  return guestBraceletIds(g).find(b=>b.id===brId)?.qty||0;
+}
+function guestBraceletList(g) {
+  return guestBraceletIds(g).map(b=>({ br:state.bracelets.find(x=>x.id===b.id), qty:b.qty })).filter(x=>x.br);
+}
+
+function renderDashboard() {
+  const ev = state.events.find(e=>e.id===state.currentEventId);
+  const title = document.getElementById('dashEventName');
+  if(title) title.textContent = ev ? ev.name : '—';
+
+  const guests = currentGuests();
+  const totalGuests = guests.length;
+  const totalPlaces = guests.reduce((a,g)=>a+g.places,0);
+  const totalBracelets = guests.reduce((a,g)=>a+guestTotalBracelets(g),0);
+  const checkedIn = guests.reduce((a,g)=>a+(g.checkedIn||0),0);
+
+  const statsEl = document.getElementById('globalStats');
+  if(!statsEl) return;
+  const cap = ev?.capacity||0;
+  const pct = cap ? Math.round(totalPlaces/cap*100) : 0;
+  const pctColor = pct>100?'gauge-red':pct>80?'gauge-yellow':'gauge-green';
+  statsEl.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Invités</div>
+      <div class="stat-value">${totalGuests}</div>
+      ${cap?`<div class="gauge-wrap"><div class="gauge-bar"><div class="gauge-fill ${pctColor}" style="width:${Math.min(pct,100)}%"></div></div><div class="gauge-label"><span>${totalPlaces} places</span><span>${cap} capacité</span></div></div>`:'<div class="stat-sub">' + totalPlaces + ' places totales</div>'}
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Check-in</div>
+      <div class="stat-value" style="color:#080809">${checkedIn}</div>
+      <div class="gauge-wrap"><div class="gauge-bar"><div class="gauge-fill gauge-green" style="width:${totalPlaces?Math.min(checkedIn/totalPlaces*100,100):0}%"></div></div><div class="gauge-label"><span>${totalPlaces?Math.round(checkedIn/totalPlaces*100):0}% entrés</span><span>${totalPlaces-checkedIn} restants</span></div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Bracelets</div>
+      <div class="stat-value" style="color:var(--accent)">${totalBracelets}</div>
+      <div class="stat-sub">${state.bracelets.length} type(s) différents</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Absent(s)</div>
+      <div class="stat-value" style="color:var(--text2)">${totalPlaces-checkedIn}</div>
+      <div class="stat-sub">places non utilisées</div>
+    </div>
+  `;
+
+  // Cat stats
+  const catEl = document.getElementById('catStats');
+  if(catEl) {
+    if(state.categories.length===0) { catEl.innerHTML='<div class="text-muted text-sm">Aucune catégorie définie</div>'; }
+    else {
+      catEl.innerHTML = state.categories.map(cat => {
+        const catGuests = guests.filter(g=>g.catId===cat.id);
+        const count = catGuests.reduce((a,g)=>a+g.places,0);
+        const quota = cat.quota||0;
+        const pct = quota ? Math.round(count/quota*100) : 0;
+        const over = quota && count > quota;
+        const overPct = quota && over ? Math.round((count-quota)/quota*100) : 0;
+        const fillColor = !quota?'gauge-green':over?'gauge-red':pct>80?'gauge-yellow':'gauge-green';
+        return `<div style="margin-bottom:14px;">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div style="width:10px;height:10px;border-radius:50%;background:${cat.color};flex-shrink:0;"></div>
+              <span style="font-size:13px;font-weight:600;">${cat.name}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-sm">${count}${quota?' / '+quota:' pers.'}</span>
+              ${over?`<span class="quota-warn quota-over">+${overPct}%</span>`:quota&&pct>80?`<span class="quota-warn quota-warn-y">${pct}%</span>`:''}
+            </div>
+          </div>
+          ${quota?`<div class="gauge-bar"><div class="gauge-fill ${fillColor}" style="width:${Math.min(pct,100)}%"></div></div>`:''}
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Bracelet stats
+  const bracEl = document.getElementById('braceletStats');
+  if(bracEl) {
+    if(state.bracelets.length===0) { bracEl.innerHTML='<div class="text-muted text-sm">Aucun type de bracelet défini</div>'; }
+    else {
+      bracEl.innerHTML = state.bracelets.map(br => {
+        const count = guests.reduce((a,g)=>a+guestBraceletQty(g,br.id),0);
+        return `<div class="flex items-center justify-between" style="padding:10px 0;border-bottom:1px solid var(--border);">
+          <div class="flex items-center gap-2">
+            <div style="width:14px;height:14px;border-radius:3px;background:${br.color};"></div>
+            <span style="font-size:13px;">${br.name}</span>
+          </div>
+          <span class="font-mono" style="font-size:15px;font-weight:600;color:var(--accent)">${count}</span>
+        </div>`;
+      }).join('') + `<div class="flex items-center justify-between" style="padding:12px 0 0;">
+        <span style="font-size:12px;color:var(--text2);">Total bracelets</span>
+        <span class="font-mono" style="font-size:16px;font-weight:700;color:var(--text)">${totalBracelets}</span>
+      </div>`;
+    }
+  }
+}
+
+function sortTable(col) {
+  if(state.sortCol===col) {
+    state.sortDir = state.sortDir==='asc'?'desc':'asc';
+  } else {
+    state.sortCol = col;
+    state.sortDir = 'asc';
+  }
+  renderGuestTable();
+}
+
+function renderGuestTable() {
+  const guests = currentGuests();
+  const search = document.getElementById('guestSearch')?.value.toLowerCase()||'';
+  const filterCat = document.getElementById('filterCat')?.value||'';
+  let filtered = guests.filter(g => {
+    const matchSearch = g.name.toLowerCase().includes(search);
+    const matchCat = !filterCat || g.catId===filterCat;
+    return matchSearch && matchCat;
+  });
+
+  const countEl = document.getElementById('guestCount');
+  if(countEl) countEl.textContent = `${guests.length} invité(s) · ${guests.reduce((a,g)=>a+g.places,0)} places`;
+
+  const tbody = document.getElementById('guestTableBody');
+  if(!tbody) return;
+  if(filtered.length===0) { tbody.innerHTML=`<tr><td colspan="8"><div class="no-results">Aucun invité trouvé</div></td></tr>`; return; }
+
+  // Apply sort
+  const col = state.sortCol||'name';
+  const dir = state.sortDir||'asc';
+  filtered.sort((a,b) => {
+    let va, vb;
+    if(col==='name') { va=a.name; vb=b.name; }
+    else if(col==='cat') { va=state.categories.find(c=>c.id===a.catId)?.name||''; vb=state.categories.find(c=>c.id===b.catId)?.name||''; }
+    else if(col==='bracelet') { va=state.bracelets.find(c=>c.id===a.braceletId)?.name||''; vb=state.bracelets.find(c=>c.id===b.braceletId)?.name||''; }
+    else if(col==='places') { va=a.places; vb=b.places; }
+    else if(col==='bracelets') { va=a.bracelets; vb=b.bracelets; }
+    else if(col==='checkin') { va=(a.checkedIn||0)/a.places; vb=(b.checkedIn||0)/b.places; }
+    if(typeof va==='string') return dir==='asc'?va.localeCompare(vb):vb.localeCompare(va);
+    return dir==='asc'?va-vb:vb-va;
+  });
+
+  // Update header indicators
+  ['name','cat','bracelet','places','bracelets','checkin'].forEach(c => {
+    const el = document.getElementById('th-'+c);
+    if(!el) return;
+    el.classList.remove('asc','desc');
+    if(c===col) el.classList.add(dir);
+  });
+
+  tbody.innerHTML = filtered.map(g => {
+    const cat = state.categories.find(c=>c.id===g.catId);
+    const ci = g.checkedIn||0;
+    const allIn = ci >= g.places;
+    const checkinColor = allIn ? '#f5e642' : ci > 0 ? 'var(--accent)' : 'var(--text3)';
+    const checkinBg = allIn ? 'rgba(245,230,66,.12)' : ci > 0 ? 'rgba(245,230,66,.06)' : 'transparent';
+    const braceletTags = guestBraceletList(g).map(({br,qty}) =>
+      `<span class="tag" style="background:${br.color}22;color:${br.color};border:1px solid ${br.color}44;">${qty>1?qty+'× ':''}${br.name}</span>`
+    ).join(' ');
+    return `<tr class="${ci>0?'checked-in':''}">
+      <td><strong style="font-family:'Space Grotesk',sans-serif;">${g.name}</strong></td>
+      <td>${cat?`<span class="tag" style="background:${cat.color}22;color:${cat.color};border:1px solid ${cat.color}44;"><span class="tag-dot" style="background:${cat.color};"></span>${cat.name}</span>`:'-'}</td>
+      <td>${braceletTags||'-'}</td>
+      <td><span class="font-mono">${g.places}</span></td>
+      <td><span class="font-mono">${guestTotalBracelets(g)}</span></td>
+      <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text2);font-size:12px;">${g.comment||'-'}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px;background:${checkinBg};border-radius:8px;padding:4px 8px;width:fit-content;">
+          <span style="font-size:13px;font-weight:700;font-family:'Space Mono',monospace;color:${checkinColor};">${ci}/${g.places}</span>
+          ${allIn?'<span style="font-size:12px;">✅</span>':ci>0?'<span style="font-size:11px;color:var(--accent);">partiel</span>':''}
+        </div>
+      </td>
+      <td>
+        <div class="flex gap-2">
+          <button class="btn-icon" onclick="openEditGuest('${g.id}')" title="Modifier">✏️</button>
+          <button class="btn-icon" onclick="deleteGuest('${g.id}')" title="Supprimer" style="color:var(--red);">🗑️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderCheckin() {
+  const search = document.getElementById('checkinSearch')?.value.toLowerCase()||'';
+  const guests = currentGuests();
+  const progress = document.getElementById('checkinProgress');
+  const totalIn = guests.reduce((a,g)=>a+(g.checkedIn||0),0);
+  const totalPlaces = guests.reduce((a,g)=>a+g.places,0);
+  if(progress) progress.textContent = `${totalIn} / ${totalPlaces} entrées`;
+
+  const container = document.getElementById('checkinResults');
+  if(!container) return;
+
+  if(!search) { container.innerHTML='<div class="no-results" style="color:var(--text3);">Tapez un nom pour rechercher un invité</div>'; return; }
+
+  const filtered = guests.filter(g=>g.name.toLowerCase().includes(search));
+  if(filtered.length===0) { container.innerHTML='<div class="no-results">Aucun invité trouvé</div>'; return; }
+
+  container.innerHTML = filtered.map(g => {
+    const cat = state.categories.find(c=>c.id===g.catId);
+    const br = state.bracelets.find(b=>b.id===g.braceletId);
+    const ci = g.checkedIn||0;
+    const hasBracelet = !!g.braceletId;
+    const dots = Array.from({length:g.places},(_,i)=>
+      `<div class="dot ${i<ci?'filled':''}" title="Place ${i+1}"></div>`
+    ).join('');
+    const allIn = ci >= g.places;
+    return `<div class="checkin-card">
+      <div class="flex items-center justify-between">
+        <div class="checkin-name">${g.name}</div>
+        <div>${allIn?'<span style="color:#080809;font-size:20px;">✅</span>':''}</div>
+      </div>
+      <div class="checkin-meta">
+        ${cat?`<span class="tag" style="background:${cat.color}22;color:${cat.color};border:1px solid ${cat.color}44;">${cat.name}</span>`:''}
+        ${guestBraceletList(g).map(({br,qty})=>`<span class="tag" style="background:${br.color}22;color:${br.color};border:1px solid ${br.color}44;">🎗️ ${qty>1?qty+'× ':''}${br.name}</span>`).join('')||`<span class="tag" style="background:rgba(255,255,255,.05);color:var(--text3);">Pas de bracelet</span>`}
+        ${g.comment?`<span class="tag" style="background:rgba(255,255,255,.05);color:var(--text2);">💬 ${g.comment}</span>`:''}
+      </div>
+      <div class="progress-dots">${dots}</div>
+      <div class="checkin-actions">
+        <button class="entry-btn entry-btn-in ${ci>=g.places?'done':''}" onclick="checkinGuest('${g.id}',1)" ${ci>=g.places?'disabled':''}>
+          ✅ Faire entrer ${g.places>1?'(1 pers)':''}
+        </button>
+        ${g.places>1&&ci>0?`<button class="entry-btn entry-btn-out" onclick="checkinGuest('${g.id}',-1)">↩️ Annuler 1</button>`:''}
+        ${ci===0?`<button class="entry-btn entry-btn-in" onclick="checkinGuest('${g.id}',g.places)" style="background:rgba(245,230,66,.25);">✅✅ Tout faire entrer (${g.places})</button>`:''}
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px;font-family:'Space Mono',monospace;">${ci} / ${g.places} entrée(s)</div>
+    </div>`;
+  }).join('');
+}
+
+function renderSettings() {
+  renderColorPicker('newCatColorPicker', 'cat');
+  renderColorPicker('newBraceletColorPicker', 'bracelet');
+
+  const catList = document.getElementById('catList');
+  if(catList) {
+    catList.innerHTML = state.categories.length===0 ? '<div class="text-muted text-sm mb-3">Aucune catégorie</div>' :
+      state.categories.map(cat => `
+        <div class="cat-item">
+          <div class="flex items-center gap-2" style="flex:1;min-width:0;">
+            <div class="cat-color" style="background:${cat.color};flex-shrink:0;"></div>
+            <span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${cat.name}</span>
+          </div>
+          <div class="flex items-center gap-2" style="flex-shrink:0;">
+            <input type="number" min="0" placeholder="Quota" value="${cat.quota||''}"
+              style="width:70px;background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);font-size:12px;font-family:'Space Mono',monospace;outline:none;text-align:center;"
+              onchange="updateCategoryQuota('${cat.id}', this.value)"
+              title="Quota max">
+            <button class="btn-icon btn-sm" onclick="deleteCategory('${cat.id}')" style="color:var(--red);">🗑️</button>
+          </div>
+        </div>
+      `).join('');
+  }
+
+  const braceletList = document.getElementById('braceletList');
+  if(braceletList) {
+    braceletList.innerHTML = state.bracelets.length===0 ? '<div class="text-muted text-sm mb-3">Aucun type de bracelet</div>' :
+      state.bracelets.map(br => `
+        <div class="cat-item">
+          <div class="flex items-center gap-2">
+            <div class="cat-color" style="background:${br.color};border-radius:3px;"></div>
+            <span style="font-size:13px;font-weight:600;">${br.name}</span>
+          </div>
+          <button class="btn-icon btn-sm" onclick="deleteBracelet('${br.id}')" style="color:var(--red);">🗑️</button>
+        </div>
+      `).join('');
+  }
+
+  const eventSettingsList = document.getElementById('eventSettingsList');
+  if(eventSettingsList) {
+    eventSettingsList.innerHTML = state.events.length===0 ? '<div class="text-muted text-sm">Aucun événement créé</div>' :
+      state.events.map(ev => `
+        <div class="cat-item">
+          <div>
+            <div style="font-size:13px;font-weight:600;">${ev.name}</div>
+            <div style="font-size:11px;color:var(--text3);font-family:'Space Mono',monospace;">${ev.date||''} ${ev.venue?'· '+ev.venue:''}</div>
+          </div>
+          <div class="flex gap-2">
+            ${ev.id===state.currentEventId?'<span class="tag" style="background:rgba(200,169,110,.15);color:var(--accent);">Actif</span>':''}
+            <button class="btn-icon btn-sm" onclick="deleteEvent('${ev.id}')" style="color:var(--red);">🗑️</button>
+          </div>
+        </div>
+      `).join('');
+  }
+}
+
+function renderColorPicker(containerId, type) {
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  const selected = type==='cat' ? state.selectedCatColor : state.selectedBraceletColor;
+  container.innerHTML = COLORS.map(c=>
+    `<div class="color-opt ${c===selected?'selected':''}" style="background:${c};" data-color="${c}" data-type="${type}"></div>`
+  ).join('');
+  container.querySelectorAll('.color-opt').forEach(el => {
+    el.addEventListener('click', () => {
+      const c = el.dataset.color;
+      const t = el.dataset.type;
+      if(t==='cat') state.selectedCatColor = c;
+      else state.selectedBraceletColor = c;
+      renderColorPicker(containerId, t);
+    });
+  });
+}
+
+function updateFilterSelect() {
+  const sel = document.getElementById('filterCat');
+  if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Toutes catégories</option>';
+  state.categories.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.textContent=c.name; if(c.id===cur) o.selected=true; sel.appendChild(o); });
+}
+
+function renderExport() {
+  const guests = currentGuests();
+  const ev = state.events.find(e=>e.id===state.currentEventId);
+
+  const summaryEl = document.getElementById('exportSummary');
+  if(summaryEl) {
+    summaryEl.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="flex justify-between"><span class="text-muted text-sm">Événement</span><strong>${ev?.name||'—'}</strong></div>
+        <div class="flex justify-between"><span class="text-muted text-sm">Date</span><span class="font-mono text-sm">${ev?.date?new Date(ev.date).toLocaleDateString('fr-FR'):'-'}</span></div>
+        <div class="flex justify-between"><span class="text-muted text-sm">Invités</span><span class="font-mono text-sm">${guests.length}</span></div>
+        <div class="flex justify-between"><span class="text-muted text-sm">Places totales</span><span class="font-mono text-sm">${guests.reduce((a,g)=>a+g.places,0)}</span></div>
+        <div class="flex justify-between"><span class="text-muted text-sm">Entrées</span><span class="font-mono text-sm" style="color:#080809">${guests.reduce((a,g)=>a+(g.checkedIn||0),0)}</span></div>
+        <div class="flex justify-between"><span class="text-muted text-sm">Non venus</span><span class="font-mono text-sm" style="color:var(--text2)">${guests.reduce((a,g)=>a+g.places-(g.checkedIn||0),0)}</span></div>
+      </div>
+    `;
+  }
+
+  const presenceEl = document.getElementById('exportPresence');
+  if(presenceEl) {
+    const present = guests.filter(g=>(g.checkedIn||0)>0);
+    const absent = guests.filter(g=>!(g.checkedIn||0));
+    presenceEl.innerHTML = `
+      <div style="margin-bottom:12px;">
+        <div class="text-sm" style="color:#080809;margin-bottom:6px;font-weight:600;">✅ Présents (${present.length})</div>
+        ${present.length===0?'<div class="text-xs text-muted">Aucun</div>':present.map(g=>`<div class="flex items-center justify-between" style="padding:4px 0;border-bottom:1px solid var(--border);"><span class="text-sm">${g.name}</span><span class="font-mono text-xs" style="color:#080809">${g.checkedIn}/${g.places}</span></div>`).join('')}
+      </div>
+      <div>
+        <div class="text-sm" style="color:var(--text2);margin-bottom:6px;font-weight:600;">❌ Absents (${absent.length})</div>
+        ${absent.length===0?'<div class="text-xs text-muted">Aucun</div>':absent.map(g=>`<div style="padding:4px 0;border-bottom:1px solid var(--border);font-size:12px;">${g.name}</div>`).join('')}
+      </div>
+    `;
+  }
+
+  const bracEl = document.getElementById('exportBracelets');
+  if(bracEl) {
+    bracEl.innerHTML = state.bracelets.map(br => {
+      const count = guests.reduce((a,g)=>a+guestBraceletQty(g,br.id),0);
+      return `<div class="flex items-center justify-between" style="padding:10px 0;border-bottom:1px solid var(--border);">
+        <div class="flex items-center gap-2">
+          <div style="width:14px;height:14px;border-radius:3px;background:${br.color};"></div>
+          <span style="font-size:13px;">${br.name}</span>
+        </div>
+        <span class="font-mono" style="font-size:16px;font-weight:700;">${count}</span>
+      </div>`;
+    }).join('') + `<div class="flex justify-between" style="padding-top:12px;font-weight:600;">
+      <span class="text-sm">TOTAL</span>
+      <span class="font-mono">${guests.reduce((a,g)=>a+guestTotalBracelets(g),0)}</span>
+    </div>`;
+  }
+}
+
+// ============================================================
+//  EXPORT FUNCTIONS
+// ============================================================
+function exportCSV() {
+  const guests = currentGuests();
+  const ev = state.events.find(e=>e.id===state.currentEventId);
+  const headers = ['Nom','Catégorie','Bracelets','Places','Total bracelets','Entrées','Statut','Commentaire'];
+  const rows = guests.map(g => {
+    const cat = state.categories.find(c=>c.id===g.catId);
+    const brList = guestBraceletList(g).map(({br,qty})=>`${qty>1?qty+'x ':''}${br.name}`).join(' + ');
+    const ci = g.checkedIn||0;
+    return [g.name, cat?.name||'', brList, g.places, guestTotalBracelets(g), ci, ci>=g.places?'Complet':ci>0?'Partiel':'Absent', `"${(g.comment||'').replace(/"/g,'""')}"`].join(',');
+  });
+  const csv = [headers.join(','), ...rows].join('\n');
+  download(`guestlist_${ev?.name||'export'}_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv', csv);
+  toast('Export CSV téléchargé !');
+}
+function exportJSON() {
+  const ev = state.events.find(e=>e.id===state.currentEventId);
+  const data = { event:ev, guests:currentGuests(), categories:state.categories, bracelets:state.bracelets, exportDate:new Date().toISOString() };
+  download(`guestlist_${ev?.name||'export'}_${new Date().toISOString().slice(0,10)}.json`, 'application/json', JSON.stringify(data,null,2));
+  toast('Export JSON téléchargé !');
+}
+function exportPresenceReport() {
+  const guests = currentGuests();
+  const ev = state.events.find(e=>e.id===state.currentEventId);
+  const headers = ['Nom','Catégorie','Bracelets','Places','Entrées','Statut'];
+  const rows = guests.map(g => {
+    const cat = state.categories.find(c=>c.id===g.catId);
+    const brList = guestBraceletList(g).map(({br,qty})=>`${qty>1?qty+'x ':''}${br.name}`).join(' + ');
+    const ci = g.checkedIn||0;
+    return [g.name,cat?.name||'',brList,g.places,ci,ci>=g.places?'Présent':ci>0?'Partiel':'Absent'].join(',');
+  });
+  const csv = [headers.join(','), ...rows].join('\n');
+  download(`presence_${ev?.name||'export'}_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv', csv);
+  toast('Rapport de présence téléchargé !');
+}
+function printGuestList() {
+  const guests = currentGuests();
+  const ev = state.events.find(e=>e.id===state.currentEventId);
+  let html = `<html><head><style>body{font-family:Arial,sans-serif;font-size:12px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;}th{background:#f0f0f0;}h1{font-size:18px;}</style></head><body>
+    <h1>${ev?.name||'Guestlist'} — ${ev?.date?new Date(ev.date).toLocaleDateString('fr-FR'):''}</h1>
+    <table><tr><th>Nom</th><th>Catégorie</th><th>Bracelets</th><th>Places</th><th>Commentaire</th><th>✅ Entrées</th></tr>
+    ${guests.map(g=>{
+      const cat=state.categories.find(c=>c.id===g.catId);
+      const brList=guestBraceletList(g).map(({br,qty})=>`${qty>1?qty+'x ':''}${br.name}`).join(' + ');
+      return `<tr><td><strong>${g.name}</strong></td><td>${cat?.name||''}</td><td>${brList||'—'}</td><td>${g.places}</td><td>${g.comment||''}</td><td>${g.checkedIn||0}/${g.places}</td></tr>`;
+    }).join('')}
+    </table></body></html>`;
+  const w = window.open('','_blank');
+  w.document.write(html); w.document.close(); w.print();
+}
+function download(filename, type, content) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], {type}));
+  a.download = filename; a.click();
+}
+
+// ============================================================
+//  EXPOSE ALL ONCLICK FUNCTIONS (required for type="module")
+// ============================================================
+window.changeBraceletQty = changeBraceletQty;
+window.changeBulkBraceletQty = changeBulkBraceletQty;
+window.setGuestMode = setGuestMode;
+window.saveBulkGuests = saveBulkGuests;
+window.renderBulkPreview = renderBulkPreview;
+window.updateCategoryQuota = updateCategoryQuota;
+window.saveEvent = saveEvent;
+window.selectEvent = selectEvent;
+window.deleteEvent = deleteEvent;
+window.addCategory = addCategory;
+window.deleteCategory = deleteCategory;
+window.addBracelet = addBracelet;
+window.deleteBracelet = deleteBracelet;
+window.openAddGuest = openAddGuest;
+window.openEditGuest = openEditGuest;
+window.saveGuest = saveGuest;
+window.deleteGuest = deleteGuest;
+window.checkinGuest = checkinGuest;
+window.sortTable = sortTable;
+window.exportCSV = exportCSV;
+window.exportJSON = exportJSON;
+window.exportPresenceReport = exportPresenceReport;
+window.printGuestList = printGuestList;
+window.renderGuestTable = renderGuestTable;
+window.renderCheckin = renderCheckin;
+
+// ============================================================
+//  INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded', () => {
+  showPage('dashboard');
+  startSync();
+  document.querySelectorAll('.modal-overlay').forEach(m=>{
+    m.addEventListener('click', e=>{ if(e.target===m) m.classList.remove('open'); });
+  });
+  document.getElementById('guestNameInput')?.addEventListener('keydown',e=>{ if(e.key==='Enter') saveGuest(); });
+});
+</script>
+</body>
+</html>
