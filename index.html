@@ -875,6 +875,10 @@ function saveBulkGuests() {
   toast(`${names.length} invité(s) ajouté(s) !`);
   refresh();
 }
+function populateGuestSelects(existingBracelets) {
+  renderBraceletPicker(existingBracelets);
+}
+function renderBraceletPicker(existingBracelets) {
   // Category select
   const cSel = document.getElementById('guestCatInput');
   cSel.innerHTML='<option value="">— Aucune —</option>';
